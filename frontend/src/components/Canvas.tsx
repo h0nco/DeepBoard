@@ -15,13 +15,14 @@ import ReactFlow, {
   OnEdgesChange,
   applyNodeChanges,
   applyEdgeChanges,
+  ConnectionMode,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import TextNode from './customNodes/TextNode';
 import ImageNode from './customNodes/ImageNode';
 import FloatingTextNode from './customNodes/FloatingTextNode';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { saveBoard, loadBoard } from '../api';
+import { saveBoard, loadBoard, uploadImage } from '../api';
 import { useBoardStore } from '../store/boardStore';
 import CanvasContextMenu from './CanvasContextMenu';
 import ThemeToggle from './ThemeToggle';
@@ -33,18 +34,15 @@ const nodeTypes: NodeTypes = {
   floatingText: FloatingTextNode,
 };
 
-const initialNodes: Node[] = [];
-const initialEdges: Edge[] = [];
-
 export default function Canvas() {
-  const [nodes, setNodes] = useNodesState(initialNodes);
-  const [edges, setEdges] = useEdgesState(initialEdges);
+  const [nodes, setNodes] = useNodesState([]);
+  const [edges, setEdges] = useEdgesState([]);
   const [isSaving, setIsSaving] = useState(false);
   const { currentBoardId } = useBoardStore();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { actualTheme } = useThemeStore();
 
-  // Загрузка доски при смене currentBoardId
+  // Загрузка доски
   useEffect(() => {
     if (currentBoardId) {
       loadBoard(currentBoardId).then((data) => {
@@ -56,7 +54,7 @@ export default function Canvas() {
     }
   }, [currentBoardId, setNodes, setEdges]);
 
-  // Автосохранение каждые 20 секунд, только если есть изменения
+  // Автосохранение
   useEffect(() => {
     const interval = setInterval(() => {
       if (currentBoardId && (nodes.length > 0 || edges.length > 0)) {
@@ -69,20 +67,40 @@ export default function Canvas() {
     return () => clearInterval(interval);
   }, [nodes, edges, currentBoardId]);
 
-  // Ручное сохранение Ctrl+S
-  useHotkeys(
-    'ctrl+s',
-    (e) => {
-      e.preventDefault();
-      if (currentBoardId) {
-        setIsSaving(true);
-        saveBoard(currentBoardId, { nodes, edges }).finally(() => {
-          setTimeout(() => setIsSaving(false), 2000);
-        });
+  useHotkeys('ctrl+s', (e) => {
+    e.preventDefault();
+    if (currentBoardId) {
+      setIsSaving(true);
+      saveBoard(currentBoardId, { nodes, edges }).finally(() => {
+        setTimeout(() => setIsSaving(false), 2000);
+      });
+    }
+  }, [currentBoardId, nodes, edges]);
+
+  // Вставка изображения из буфера обмена
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (file) {
+            try {
+              const imageUrl = await uploadImage(file);
+              addImageNode(imageUrl, { x: 100, y: 100 }); // TODO: позиция курсора
+            } catch (err) {
+              console.error('Ошибка загрузки изображения', err);
+            }
+          }
+          break;
+        }
       }
-    },
-    [currentBoardId, nodes, edges]
-  );
+    };
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, []);
 
   const onConnect = useCallback(
     (params: Connection) =>
@@ -92,11 +110,12 @@ export default function Canvas() {
             ...params,
             type: 'default',
             markerEnd: { type: MarkerType.ArrowClosed },
+            style: { strokeWidth: 2, stroke: actualTheme === 'dark' ? '#9ca3af' : '#4b5563' },
           },
           eds
         )
       ),
-    [setEdges]
+    [setEdges, actualTheme]
   );
 
   const onNodesChange: OnNodesChange = useCallback(
@@ -121,6 +140,7 @@ export default function Canvas() {
         fontWeight: 'normal',
         fontStyle: 'normal',
         textDecoration: 'none',
+        color: actualTheme === 'dark' ? '#f3f4f6' : '#111827',
       },
     };
     setNodes((nds) => nds.concat(newNode));
@@ -135,20 +155,38 @@ export default function Canvas() {
         content: 'Плавающий текст',
         fontSize: 20,
         fontFamily: 'Arial',
+        color: actualTheme === 'dark' ? '#f3f4f6' : '#111827',
       },
     };
     setNodes((nds) => nds.concat(newNode));
   };
 
-  // Заглушки для функций контекстного меню
+  const addImageNode = (imageUrl: string, position: { x: number; y: number }) => {
+    const newNode: Node = {
+      id: `image-${Date.now()}`,
+      type: 'image',
+      position,
+      data: { src: imageUrl, width: 200, height: 150 },
+    };
+    setNodes((nds) => nds.concat(newNode));
+  };
+
   const handlePasteImage = () => {
-    // TODO: реализовать вставку изображения из буфера
-    console.log('Вставка изображения (пока заглушка)');
+    // Заглушка для меню, реальная вставка через Ctrl+V
+    alert('Вставьте изображение из буфера (Ctrl+V)');
   };
 
   const handleFreeDraw = () => {
-    // TODO: включить режим рисования
-    console.log('Свободное рисование (пока заглушка)');
+    console.log('Свободное рисование (заглушка)');
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      uploadImage(file).then((url) => {
+        addImageNode(url, { x: 200, y: 200 });
+      });
+    }
   };
 
   return (
@@ -173,6 +211,7 @@ export default function Canvas() {
           multiSelectionKeyCode="Shift"
           selectionOnDrag
           panOnDrag
+          connectionMode={ConnectionMode.Loose} // свободная привязка
         >
           <Background
             variant={BackgroundVariant.Dots}
@@ -184,24 +223,28 @@ export default function Canvas() {
         </ReactFlow>
       </CanvasContextMenu>
 
-      <div className="absolute bottom-4 left-4 z-10 flex gap-2">
+      <div className="absolute bottom-4 left-16 z-10 flex gap-2">
         <button
           onClick={addTextNode}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md shadow-md transition-colors"
+          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-md shadow-md text-sm transition-colors"
         >
-          + Текст с рамкой
+          📝 Текст
         </button>
         <button
           onClick={addFloatingTextNode}
-          className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md shadow-md transition-colors"
+          className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1.5 rounded-md shadow-md text-sm transition-colors"
         >
-          + Плавающий текст
+          ✨ Плав. текст
         </button>
+        <label className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-md shadow-md text-sm transition-colors cursor-pointer">
+          🖼️ Изображение
+          <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+        </label>
         <ThemeToggle />
       </div>
 
       {isSaving && (
-        <div className="absolute bottom-4 right-4 z-10 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-3 py-1 rounded-full text-sm shadow-md transition-opacity">
+        <div className="absolute bottom-4 right-4 z-10 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-3 py-1 rounded-full text-sm shadow-md">
           💾 Сохранено
         </div>
       )}

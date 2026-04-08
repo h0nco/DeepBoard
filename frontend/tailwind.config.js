@@ -9,16 +9,16 @@ export default {
     extend: {
       colors: {
         canvas: {
-          light: '#f0f2f5',
-          dark: '#1e1e1e',
+          light: '#f9fafb',   // единый светлый фон (как у панели)
+          dark: '#111827',     // темный фон (gray-900)
         },
         node: {
           light: '#ffffff',
-          dark: '#2d2d2d',
+          dark: '#1f2937',
         },
         border: {
-          light: '#d1d5db',
-          dark: '#4b5563',
+          light: '#e5e7eb',
+          dark: '#374151',
         }
       }
     },
