@@ -11,7 +11,7 @@ app = FastAPI(title="Deepboard API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Vite default
+    allow_origins=["http://localhost:5173"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -19,7 +19,6 @@ app.add_middleware(
 
 app.include_router(boards.router)
 
-# Serve uploaded images
 images_dir = os.path.join(os.path.dirname(__file__), "..", "data", "images")
 os.makedirs(images_dir, exist_ok=True)
 app.mount("/static/images", StaticFiles(directory=images_dir), name="images")

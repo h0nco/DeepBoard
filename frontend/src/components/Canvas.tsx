@@ -15,7 +15,6 @@ import ReactFlow, {
   OnEdgesChange,
   applyNodeChanges,
   applyEdgeChanges,
-  ConnectionMode,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import TextNode from './customNodes/TextNode';
@@ -38,11 +37,12 @@ export default function Canvas() {
   const [nodes, setNodes] = useNodesState([]);
   const [edges, setEdges] = useEdgesState([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
   const { currentBoardId } = useBoardStore();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { actualTheme } = useThemeStore();
 
-  // Загрузка доски
+  // Load board
   useEffect(() => {
     if (currentBoardId) {
       loadBoard(currentBoardId).then((data) => {
@@ -54,7 +54,7 @@ export default function Canvas() {
     }
   }, [currentBoardId, setNodes, setEdges]);
 
-  // Автосохранение
+  // Autosave every 20 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       if (currentBoardId && (nodes.length > 0 || edges.length > 0)) {
@@ -67,6 +67,7 @@ export default function Canvas() {
     return () => clearInterval(interval);
   }, [nodes, edges, currentBoardId]);
 
+  // Manual save Ctrl+S
   useHotkeys('ctrl+s', (e) => {
     e.preventDefault();
     if (currentBoardId) {
@@ -77,7 +78,7 @@ export default function Canvas() {
     }
   }, [currentBoardId, nodes, edges]);
 
-  // Вставка изображения из буфера обмена
+  // Paste image from clipboard
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
@@ -89,9 +90,9 @@ export default function Canvas() {
           if (file) {
             try {
               const imageUrl = await uploadImage(file);
-              addImageNode(imageUrl, { x: 100, y: 100 }); // TODO: позиция курсора
+              addImageNode(imageUrl, { x: 100, y: 100 });
             } catch (err) {
-              console.error('Ошибка загрузки изображения', err);
+              console.error('Failed to upload image', err);
             }
           }
           break;
@@ -109,7 +110,11 @@ export default function Canvas() {
           {
             ...params,
             type: 'default',
-            markerEnd: { type: MarkerType.ArrowClosed },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              width: 12,
+              height: 12,
+            },
             style: { strokeWidth: 2, stroke: actualTheme === 'dark' ? '#9ca3af' : '#4b5563' },
           },
           eds
@@ -134,7 +139,7 @@ export default function Canvas() {
       type: 'text',
       position: { x: 100, y: 100 },
       data: {
-        content: 'Редактируемый текст',
+        content: 'Edit me',
         fontSize: 16,
         fontFamily: 'Arial',
         fontWeight: 'normal',
@@ -152,7 +157,7 @@ export default function Canvas() {
       type: 'floatingText',
       position: { x: 150, y: 150 },
       data: {
-        content: 'Плавающий текст',
+        content: 'Floating text',
         fontSize: 20,
         fontFamily: 'Arial',
         color: actualTheme === 'dark' ? '#f3f4f6' : '#111827',
@@ -172,12 +177,11 @@ export default function Canvas() {
   };
 
   const handlePasteImage = () => {
-    // Заглушка для меню, реальная вставка через Ctrl+V
-    alert('Вставьте изображение из буфера (Ctrl+V)');
+    alert('Use Ctrl+V to paste image from clipboard');
   };
 
   const handleFreeDraw = () => {
-    console.log('Свободное рисование (заглушка)');
+    setIsDrawingMode((prev) => !prev);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -211,7 +215,9 @@ export default function Canvas() {
           multiSelectionKeyCode="Shift"
           selectionOnDrag
           panOnDrag
-          connectionMode={ConnectionMode.Loose} // свободная привязка
+          nodesDraggable={!isDrawingMode}
+          nodesConnectable={!isDrawingMode}
+          elementsSelectable={!isDrawingMode}
         >
           <Background
             variant={BackgroundVariant.Dots}
@@ -228,24 +234,40 @@ export default function Canvas() {
           onClick={addTextNode}
           className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-md shadow-md text-sm transition-colors"
         >
-          📝 Текст
+          Text box
         </button>
         <button
           onClick={addFloatingTextNode}
           className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1.5 rounded-md shadow-md text-sm transition-colors"
         >
-          ✨ Плав. текст
+          Floating text
         </button>
         <label className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-md shadow-md text-sm transition-colors cursor-pointer">
-          🖼️ Изображение
+          Image
           <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
         </label>
+        <button
+          onClick={handleFreeDraw}
+          className={`px-3 py-1.5 rounded-md shadow-md text-sm transition-colors ${
+            isDrawingMode
+              ? 'bg-red-500 hover:bg-red-600 text-white'
+              : 'bg-purple-500 hover:bg-purple-600 text-white'
+          }`}
+        >
+          {isDrawingMode ? 'Drawing (on)' : 'Drawing'}
+        </button>
         <ThemeToggle />
       </div>
 
       {isSaving && (
-        <div className="absolute bottom-4 right-4 z-10 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-3 py-1 rounded-full text-sm shadow-md">
-          💾 Сохранено
+        <div className="absolute bottom-4 right-4 z-10 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-3 py-1 rounded-full text-sm shadow-md transition-opacity">
+          Saved
+        </div>
+      )}
+
+      {isDrawingMode && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-4 py-1 rounded-full text-sm shadow-md z-10">
+          Drawing mode enabled (lines not saved yet)
         </div>
       )}
     </div>

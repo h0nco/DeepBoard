@@ -61,10 +61,9 @@ def delete_board(board_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Board not found")
     return {"ok": True}
 
-# Upload image endpoint
 @router.post("/upload-image")
 async def upload_image(file: UploadFile = File(...)):
-    # Save to backend/data/images/
+    # Папка для сохранения
     images_dir = os.path.join(os.path.dirname(database.DATA_DIR), "images")
     os.makedirs(images_dir, exist_ok=True)
     ext = os.path.splitext(file.filename)[1]
@@ -73,4 +72,5 @@ async def upload_image(file: UploadFile = File(...)):
     async with aiofiles.open(file_path, 'wb') as out_file:
         content = await file.read()
         await out_file.write(content)
-    return {"url": f"/static/images/{filename}"}
+    # Возвращаем полный URL для доступа через сервер
+    return {"url": f"http://localhost:8000/static/images/{filename}"}

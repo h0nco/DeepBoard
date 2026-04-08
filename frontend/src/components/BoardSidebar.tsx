@@ -7,7 +7,7 @@ export default function BoardSidebar() {
   const [isHovered, setIsHovered] = useState(false);
 
   const handleNewBoard = async () => {
-    const name = prompt('Название доски', `Доска ${boards.length + 1}`);
+    const name = prompt('Board name', `Board ${boards.length + 1}`);
     if (name) {
       const newBoard = await createBoard(name);
       await fetchBoards();
@@ -16,7 +16,7 @@ export default function BoardSidebar() {
   };
 
   const handleDeleteBoard = async (id: number) => {
-    if (confirm('Удалить доску?')) {
+    if (confirm('Delete board?')) {
       await deleteBoard(id);
       await fetchBoards();
       if (currentBoardId === id) {
@@ -38,13 +38,13 @@ export default function BoardSidebar() {
         {isHovered ? (
           <>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Доски</h2>
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Boards</h2>
               <button
                 onClick={handleNewBoard}
                 className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-                title="Новая доска"
+                title="New board"
               >
-                ➕
+                + New
               </button>
             </div>
             <div className="flex-1 overflow-y-auto">
@@ -66,7 +66,7 @@ export default function BoardSidebar() {
                     }}
                     className="opacity-0 group-hover:opacity-100 p-1 text-gray-500 hover:text-red-500"
                   >
-                    🗑️
+                    Delete
                   </button>
                 </div>
               ))}
@@ -75,7 +75,7 @@ export default function BoardSidebar() {
         ) : (
           <div className="flex flex-col items-center space-y-4 mt-4">
             <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
-              📋
+              B
             </div>
           </div>
         )}

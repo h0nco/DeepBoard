@@ -1,9 +1,9 @@
-import { memo, useState, useRef, useEffect, useCallback } from 'react';
-import { Handle, Position, NodeProps, NodeResizer } from 'reactflow';
+import { memo, useState, useRef, useEffect } from 'react';
+import { Handle, Position, NodeProps } from 'reactflow';
 
 const FloatingTextNode = ({ id, data, selected }: NodeProps) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [content, setContent] = useState(data.content || 'Текст');
+  const [content, setContent] = useState(data.content || 'Text');
   const [fontSize, setFontSize] = useState(data.fontSize || 20);
   const [color, setColor] = useState(data.color || '#111827');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -25,27 +25,15 @@ const FloatingTextNode = ({ id, data, selected }: NodeProps) => {
     }
   }, [content, isEditing]);
 
-  const handleResize = useCallback((_: any, params: any) => {
-    setFontSize(Math.max(12, params.width * 0.15));
-  }, []);
-
   return (
-    <div style={{ minWidth: 30, minHeight: 20, position: 'relative' }}>
-      <NodeResizer
-        color="#ff0071"
-        isVisible={selected}
-        minWidth={20}
-        minHeight={20}
-        onResize={handleResize}
-        keepAspectRatio={false}
-      />
+    <div style={{ position: 'relative' }}>
       <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
       <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
       <Handle type="source" position={Position.Left} style={{ opacity: 0 }} />
       <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
 
       {isEditing ? (
-        <div>
+        <div className="flex flex-col gap-1">
           <textarea
             ref={textareaRef}
             value={content}
@@ -55,11 +43,9 @@ const FloatingTextNode = ({ id, data, selected }: NodeProps) => {
             style={{
               fontSize: `${fontSize}px`,
               fontFamily: data.fontFamily || 'Arial',
-              fontWeight: data.fontWeight || 'normal',
-              fontStyle: data.fontStyle || 'normal',
-              textDecoration: data.textDecoration || 'none',
               color,
-              width: '100%',
+              width: 'auto',
+              minWidth: '50px',
               border: 'none',
               outline: 'none',
               resize: 'none',
@@ -68,12 +54,23 @@ const FloatingTextNode = ({ id, data, selected }: NodeProps) => {
             }}
             className="bg-transparent"
           />
-          <input
-            type="color"
-            value={color}
-            onChange={(e) => setColor(e.target.value)}
-            className="w-5 h-5 mt-1"
-          />
+          <div className="flex items-center gap-1">
+            <input
+              type="color"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              className="w-5 h-5"
+            />
+            <input
+              type="range"
+              min="8"
+              max="72"
+              value={fontSize}
+              onChange={(e) => setFontSize(Number(e.target.value))}
+              className="w-20"
+            />
+            <span className="text-xs">{fontSize}px</span>
+          </div>
         </div>
       ) : (
         <div
@@ -81,15 +78,11 @@ const FloatingTextNode = ({ id, data, selected }: NodeProps) => {
           style={{
             fontSize: `${fontSize}px`,
             fontFamily: data.fontFamily || 'Arial',
-            fontWeight: data.fontWeight || 'normal',
-            fontStyle: data.fontStyle || 'normal',
-            textDecoration: data.textDecoration || 'none',
             color,
-            padding: 0,
             cursor: 'text',
             background: 'transparent',
+            whiteSpace: 'pre-wrap',
           }}
-          className="whitespace-pre-wrap"
         >
           {content}
         </div>

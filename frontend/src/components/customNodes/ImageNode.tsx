@@ -1,14 +1,9 @@
-import { memo, useState, useRef, useEffect } from 'react';
+import { memo, useState } from 'react';
 import { Handle, Position, NodeProps, NodeResizer } from 'reactflow';
 
 const ImageNode = ({ id, data, selected }: NodeProps) => {
   const [dimensions, setDimensions] = useState({ width: data.width || 200, height: data.height || 150 });
-  const imgRef = useRef<HTMLImageElement>(null);
-
-  useEffect(() => {
-    data.width = dimensions.width;
-    data.height = dimensions.height;
-  }, [dimensions, data]);
+  const [error, setError] = useState(false);
 
   return (
     <div
@@ -22,6 +17,8 @@ const ImageNode = ({ id, data, selected }: NodeProps) => {
         minHeight={50}
         onResize={(_, params) => {
           setDimensions({ width: params.width, height: params.height });
+          data.width = params.width;
+          data.height = params.height;
         }}
         keepAspectRatio={false}
       />
@@ -29,13 +26,20 @@ const ImageNode = ({ id, data, selected }: NodeProps) => {
       <Handle type="source" position={Position.Bottom} />
       <Handle type="source" position={Position.Right} />
       <Handle type="source" position={Position.Left} />
-      <img
-        ref={imgRef}
-        src={data.src}
-        alt=""
-        className="w-full h-full object-cover"
-        draggable={false}
-      />
+
+      {error ? (
+        <div className="flex items-center justify-center h-full text-red-500 text-sm">
+          Failed to load image
+        </div>
+      ) : (
+        <img
+          src={data.src}
+          alt=""
+          className="w-full h-full object-cover"
+          onError={() => setError(true)}
+          draggable={false}
+        />
+      )}
     </div>
   );
 };
