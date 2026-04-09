@@ -28,7 +28,7 @@ export default function BoardSidebar() {
 
   return (
     <div
-      className={`fixed left-0 top-0 h-full bg-canvas-light dark:bg-canvas-dark border-r border-border-light dark:border-border-dark transition-all duration-200 z-20 shadow-lg ${
+      className={`fixed left-0 top-0 h-full bg-canvas-light dark:bg-canvas-dark border-r border-border-light dark:border-border-dark transition-all duration-200 z-20 shadow-lg rounded-r-2xl ${
         isHovered ? 'w-64' : 'w-12'
       }`}
       onMouseEnter={() => setIsHovered(true)}
@@ -41,17 +41,17 @@ export default function BoardSidebar() {
               <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Boards</h2>
               <button
                 onClick={handleNewBoard}
-                className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+                className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                 title="New board"
               >
                 + New
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto space-y-1">
               {boards.map((board) => (
                 <div
                   key={board.id}
-                  className={`group flex items-center justify-between p-2 mb-1 rounded-lg cursor-pointer ${
+                  className={`group flex items-center justify-between p-2 rounded-xl cursor-pointer transition-colors ${
                     currentBoardId === board.id
                       ? 'bg-blue-100 dark:bg-blue-900'
                       : 'hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -64,7 +64,7 @@ export default function BoardSidebar() {
                       e.stopPropagation();
                       handleDeleteBoard(board.id);
                     }}
-                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-500 hover:text-red-500"
+                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-500 hover:text-red-500 transition-opacity"
                   >
                     Delete
                   </button>
@@ -74,7 +74,7 @@ export default function BoardSidebar() {
           </>
         ) : (
           <div className="flex flex-col items-center space-y-4 mt-4">
-            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
+            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium">
               B
             </div>
           </div>

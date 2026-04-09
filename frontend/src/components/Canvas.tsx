@@ -15,6 +15,7 @@ import ReactFlow, {
   OnEdgesChange,
   applyNodeChanges,
   applyEdgeChanges,
+  ConnectionLineType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import TextNode from './customNodes/TextNode';
@@ -42,7 +43,6 @@ export default function Canvas() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { actualTheme } = useThemeStore();
 
-  // Load board
   useEffect(() => {
     if (currentBoardId) {
       loadBoard(currentBoardId).then((data) => {
@@ -54,7 +54,6 @@ export default function Canvas() {
     }
   }, [currentBoardId, setNodes, setEdges]);
 
-  // Autosave every 20 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       if (currentBoardId && (nodes.length > 0 || edges.length > 0)) {
@@ -67,7 +66,6 @@ export default function Canvas() {
     return () => clearInterval(interval);
   }, [nodes, edges, currentBoardId]);
 
-  // Manual save Ctrl+S
   useHotkeys('ctrl+s', (e) => {
     e.preventDefault();
     if (currentBoardId) {
@@ -78,7 +76,6 @@ export default function Canvas() {
     }
   }, [currentBoardId, nodes, edges]);
 
-  // Paste image from clipboard
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
@@ -109,13 +106,17 @@ export default function Canvas() {
         addEdge(
           {
             ...params,
-            type: 'default',
+            type: 'smoothstep', // гибкие линии
             markerEnd: {
               type: MarkerType.ArrowClosed,
-              width: 12,
-              height: 12,
+              width: 10,
+              height: 10,
+              color: actualTheme === 'dark' ? '#9ca3af' : '#4b5563',
             },
-            style: { strokeWidth: 2, stroke: actualTheme === 'dark' ? '#9ca3af' : '#4b5563' },
+            style: {
+              strokeWidth: 2,
+              stroke: actualTheme === 'dark' ? '#9ca3af' : '#4b5563',
+            },
           },
           eds
         )
@@ -218,6 +219,7 @@ export default function Canvas() {
           nodesDraggable={!isDrawingMode}
           nodesConnectable={!isDrawingMode}
           elementsSelectable={!isDrawingMode}
+          connectionLineType={ConnectionLineType.SmoothStep}
         >
           <Background
             variant={BackgroundVariant.Dots}
@@ -232,23 +234,23 @@ export default function Canvas() {
       <div className="absolute bottom-4 left-16 z-10 flex gap-2">
         <button
           onClick={addTextNode}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-md shadow-md text-sm transition-colors"
+          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-full shadow-md text-sm transition-colors"
         >
           Text box
         </button>
         <button
           onClick={addFloatingTextNode}
-          className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1.5 rounded-md shadow-md text-sm transition-colors"
+          className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1.5 rounded-full shadow-md text-sm transition-colors"
         >
           Floating text
         </button>
-        <label className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-md shadow-md text-sm transition-colors cursor-pointer">
+        <label className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-full shadow-md text-sm transition-colors cursor-pointer">
           Image
           <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
         </label>
         <button
           onClick={handleFreeDraw}
-          className={`px-3 py-1.5 rounded-md shadow-md text-sm transition-colors ${
+          className={`px-3 py-1.5 rounded-full shadow-md text-sm transition-colors ${
             isDrawingMode
               ? 'bg-red-500 hover:bg-red-600 text-white'
               : 'bg-purple-500 hover:bg-purple-600 text-white'

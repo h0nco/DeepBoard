@@ -3,7 +3,7 @@ import { Handle, Position, NodeProps, NodeResizer } from 'reactflow';
 
 const TextNode = ({ id, data, selected }: NodeProps) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [content, setContent] = useState(data.content || 'Текст');
+  const [content, setContent] = useState(data.content || 'Text');
   const [fontSize, setFontSize] = useState(data.fontSize || 16);
   const [fontFamily, setFontFamily] = useState(data.fontFamily || 'Arial');
   const [fontWeight, setFontWeight] = useState(data.fontWeight || 'normal');
@@ -48,7 +48,6 @@ const TextNode = ({ id, data, selected }: NodeProps) => {
   }, [content, isEditing]);
 
   const handleResize = useCallback((_: any, params: any) => {
-    // Масштабируем шрифт пропорционально ширине
     const newSize = Math.max(12, Math.min(72, params.width * 0.12));
     setFontSize(newSize);
   }, []);
@@ -73,47 +72,28 @@ const TextNode = ({ id, data, selected }: NodeProps) => {
       <Handle type="source" position={Position.Left} />
 
       {isEditing ? (
-        <div className="p-1">
-          <textarea
-            ref={textareaRef}
-            value={content}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            autoFocus
-            style={{
-              fontSize: `${fontSize}px`,
-              fontFamily,
-              fontWeight,
-              fontStyle,
-              textDecoration,
-              color,
-              width: '100%',
-              border: 'none',
-              outline: 'none',
-              resize: 'none',
-              padding: 0,
-              background: 'transparent',
-            }}
-            className="bg-transparent"
-          />
-          <div className="flex gap-1 mt-1">
-            <input
-              type="color"
-              value={color}
-              onChange={(e) => setColor(e.target.value)}
-              className="w-5 h-5 p-0 border-0"
-            />
-            <select
-              value={fontFamily}
-              onChange={(e) => setFontFamily(e.target.value)}
-              className="text-xs border rounded"
-            >
-              <option value="Arial">Arial</option>
-              <option value="Roboto">Roboto</option>
-              <option value="monospace">Monospace</option>
-            </select>
-          </div>
-        </div>
+        <textarea
+          ref={textareaRef}
+          value={content}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          autoFocus
+          style={{
+            fontSize: `${fontSize}px`,
+            fontFamily,
+            fontWeight,
+            fontStyle,
+            textDecoration,
+            color,
+            width: '100%',
+            border: 'none',
+            outline: 'none',
+            resize: 'none',
+            padding: '4px',
+            background: 'transparent',
+          }}
+          className="bg-transparent"
+        />
       ) : (
         <div
           onDoubleClick={handleDoubleClick}
