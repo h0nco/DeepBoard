@@ -25,12 +25,21 @@ const FloatingTextNode = ({ id, data, selected }: NodeProps) => {
     }
   }, [content, isEditing]);
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
   return (
-    <div style={{ position: 'relative' }}>
-      <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
-      <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
-      <Handle type="source" position={Position.Left} style={{ opacity: 0 }} />
-      <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
+    <div style={{ position: 'relative' }} onContextMenu={handleContextMenu}>
+      <Handle type="target" position={Position.Top} id="top" style={{ opacity: 0 }} />
+      <Handle type="source" position={Position.Top} id="top-source" style={{ opacity: 0 }} />
+      <Handle type="target" position={Position.Bottom} id="bottom" style={{ opacity: 0 }} />
+      <Handle type="source" position={Position.Bottom} id="bottom-source" style={{ opacity: 0 }} />
+      <Handle type="target" position={Position.Left} id="left" style={{ opacity: 0 }} />
+      <Handle type="source" position={Position.Left} id="left-source" style={{ opacity: 0 }} />
+      <Handle type="target" position={Position.Right} id="right" style={{ opacity: 0 }} />
+      <Handle type="source" position={Position.Right} id="right-source" style={{ opacity: 0 }} />
 
       {isEditing ? (
         <div className="flex flex-col gap-1">

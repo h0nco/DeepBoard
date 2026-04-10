@@ -52,11 +52,17 @@ const TextNode = ({ id, data, selected }: NodeProps) => {
     setFontSize(newSize);
   }, []);
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
   return (
     <div
       ref={nodeRef}
       className="relative bg-node-light dark:bg-node-dark border border-border-light dark:border-border-dark shadow-sm transition-colors"
       style={{ borderRadius: `${borderRadius}px`, minWidth: 80, minHeight: 40 }}
+      onContextMenu={handleContextMenu}
     >
       <NodeResizer
         color="#ff0071"
@@ -66,34 +72,58 @@ const TextNode = ({ id, data, selected }: NodeProps) => {
         onResize={handleResize}
         keepAspectRatio={false}
       />
-      <Handle type="target" position={Position.Top} />
-      <Handle type="source" position={Position.Bottom} />
-      <Handle type="source" position={Position.Right} />
-      <Handle type="source" position={Position.Left} />
+      {/* 4 стандартные точки подключения */}
+      <Handle type="target" position={Position.Top} id="top" />
+      <Handle type="source" position={Position.Top} id="top-source" />
+      <Handle type="target" position={Position.Bottom} id="bottom" />
+      <Handle type="source" position={Position.Bottom} id="bottom-source" />
+      <Handle type="target" position={Position.Left} id="left" />
+      <Handle type="source" position={Position.Left} id="left-source" />
+      <Handle type="target" position={Position.Right} id="right" />
+      <Handle type="source" position={Position.Right} id="right-source" />
 
       {isEditing ? (
-        <textarea
-          ref={textareaRef}
-          value={content}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          autoFocus
-          style={{
-            fontSize: `${fontSize}px`,
-            fontFamily,
-            fontWeight,
-            fontStyle,
-            textDecoration,
-            color,
-            width: '100%',
-            border: 'none',
-            outline: 'none',
-            resize: 'none',
-            padding: '4px',
-            background: 'transparent',
-          }}
-          className="bg-transparent"
-        />
+        <div className="p-1">
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            autoFocus
+            style={{
+              fontSize: `${fontSize}px`,
+              fontFamily,
+              fontWeight,
+              fontStyle,
+              textDecoration,
+              color,
+              width: '100%',
+              border: 'none',
+              outline: 'none',
+              resize: 'none',
+              padding: 0,
+              background: 'transparent',
+            }}
+            className="bg-transparent"
+          />
+          <div className="flex gap-1 mt-1">
+            <input
+              type="color"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              className="w-5 h-5 p-0 border-0"
+            />
+            <select
+              value={fontFamily}
+              onChange={(e) => setFontFamily(e.target.value)}
+              className="text-xs border rounded"
+            >
+              <option value="Arial">Arial</option>
+              <option value="Roboto">Roboto</option>
+              <option value="monospace">Monospace</option>
+            </select>
+          </div>
+        </div>
       ) : (
         <div
           onDoubleClick={handleDoubleClick}

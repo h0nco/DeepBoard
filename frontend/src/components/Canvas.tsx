@@ -15,7 +15,8 @@ import ReactFlow, {
   OnEdgesChange,
   applyNodeChanges,
   applyEdgeChanges,
-  ConnectionLineType,
+  ConnectionMode,
+  ReactFlowInstance,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import TextNode from './customNodes/TextNode';
@@ -39,26 +40,35 @@ export default function Canvas() {
   const [edges, setEdges] = useEdgesState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 100, y: 100 });
   const { currentBoardId } = useBoardStore();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
   const { actualTheme } = useThemeStore();
 
+  // Load board
   useEffect(() => {
     if (currentBoardId) {
       loadBoard(currentBoardId).then((data) => {
         if (data) {
           setNodes(data.nodes || []);
           setEdges(data.edges || []);
+          // Restore viewport if saved
+          if (data.viewport && reactFlowInstance.current) {
+            reactFlowInstance.current.setViewport(data.viewport);
+          }
         }
       });
     }
   }, [currentBoardId, setNodes, setEdges]);
 
+  // Autosave every 20 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       if (currentBoardId && (nodes.length > 0 || edges.length > 0)) {
+        const viewport = reactFlowInstance.current?.getViewport();
         setIsSaving(true);
-        saveBoard(currentBoardId, { nodes, edges }).finally(() => {
+        saveBoard(currentBoardId, { nodes, edges, viewport }).finally(() => {
           setTimeout(() => setIsSaving(false), 2000);
         });
       }
@@ -66,16 +76,60 @@ export default function Canvas() {
     return () => clearInterval(interval);
   }, [nodes, edges, currentBoardId]);
 
+  // Manual save Ctrl+S
   useHotkeys('ctrl+s', (e) => {
     e.preventDefault();
     if (currentBoardId) {
+      const viewport = reactFlowInstance.current?.getViewport();
       setIsSaving(true);
-      saveBoard(currentBoardId, { nodes, edges }).finally(() => {
+      saveBoard(currentBoardId, { nodes, edges, viewport }).finally(() => {
         setTimeout(() => setIsSaving(false), 2000);
       });
     }
   }, [currentBoardId, nodes, edges]);
 
+  // Track mouse position
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (reactFlowWrapper.current) {
+        const rect = reactFlowWrapper.current.getBoundingClientRect();
+        setMousePosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+      }
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  // Create floating text on key press
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.ctrlKey || e.altKey || e.metaKey
+      ) return;
+
+      if (e.key.length === 1 && !e.key.match(/^[\x00-\x1F]$/)) {
+        e.preventDefault();
+        const newNode: Node = {
+          id: `floating-${Date.now()}`,
+          type: 'floatingText',
+          position: mousePosition,
+          data: {
+            content: e.key,
+            fontSize: 20,
+            fontFamily: 'Arial',
+            color: actualTheme === 'dark' ? '#f3f4f6' : '#111827',
+          },
+        };
+        setNodes((nds) => nds.concat(newNode));
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [mousePosition, actualTheme, setNodes]);
+
+  // Paste image from clipboard
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
@@ -87,7 +141,7 @@ export default function Canvas() {
           if (file) {
             try {
               const imageUrl = await uploadImage(file);
-              addImageNode(imageUrl, { x: 100, y: 100 });
+              addImageNode(imageUrl, mousePosition);
             } catch (err) {
               console.error('Failed to upload image', err);
             }
@@ -98,7 +152,7 @@ export default function Canvas() {
     };
     document.addEventListener('paste', handlePaste);
     return () => document.removeEventListener('paste', handlePaste);
-  }, []);
+  }, [mousePosition]);
 
   const onConnect = useCallback(
     (params: Connection) =>
@@ -106,17 +160,13 @@ export default function Canvas() {
         addEdge(
           {
             ...params,
-            type: 'smoothstep', // гибкие линии
+            type: 'default',
             markerEnd: {
               type: MarkerType.ArrowClosed,
-              width: 10,
-              height: 10,
-              color: actualTheme === 'dark' ? '#9ca3af' : '#4b5563',
+              width: 12,
+              height: 12,
             },
-            style: {
-              strokeWidth: 2,
-              stroke: actualTheme === 'dark' ? '#9ca3af' : '#4b5563',
-            },
+            style: { strokeWidth: 2, stroke: actualTheme === 'dark' ? '#9ca3af' : '#4b5563' },
           },
           eds
         )
@@ -138,7 +188,7 @@ export default function Canvas() {
     const newNode: Node = {
       id: `text-${Date.now()}`,
       type: 'text',
-      position: { x: 100, y: 100 },
+      position: mousePosition,
       data: {
         content: 'Edit me',
         fontSize: 16,
@@ -156,7 +206,7 @@ export default function Canvas() {
     const newNode: Node = {
       id: `floating-${Date.now()}`,
       type: 'floatingText',
-      position: { x: 150, y: 150 },
+      position: mousePosition,
       data: {
         content: 'Floating text',
         fontSize: 20,
@@ -189,9 +239,13 @@ export default function Canvas() {
     const file = e.target.files?.[0];
     if (file) {
       uploadImage(file).then((url) => {
-        addImageNode(url, { x: 200, y: 200 });
+        addImageNode(url, mousePosition);
       });
     }
+  };
+
+  const onInit = (instance: ReactFlowInstance) => {
+    reactFlowInstance.current = instance;
   };
 
   return (
@@ -210,6 +264,7 @@ export default function Canvas() {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onInit={onInit}
           nodeTypes={nodeTypes}
           fitView
           deleteKeyCode="Delete"
@@ -219,7 +274,8 @@ export default function Canvas() {
           nodesDraggable={!isDrawingMode}
           nodesConnectable={!isDrawingMode}
           elementsSelectable={!isDrawingMode}
-          connectionLineType={ConnectionLineType.SmoothStep}
+          connectOnClick={false}
+          connectionMode={ConnectionMode.Loose}
         >
           <Background
             variant={BackgroundVariant.Dots}
@@ -234,23 +290,23 @@ export default function Canvas() {
       <div className="absolute bottom-4 left-16 z-10 flex gap-2">
         <button
           onClick={addTextNode}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-full shadow-md text-sm transition-colors"
+          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-md shadow-md text-sm transition-colors"
         >
           Text box
         </button>
         <button
           onClick={addFloatingTextNode}
-          className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1.5 rounded-full shadow-md text-sm transition-colors"
+          className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1.5 rounded-md shadow-md text-sm transition-colors"
         >
           Floating text
         </button>
-        <label className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-full shadow-md text-sm transition-colors cursor-pointer">
+        <label className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-md shadow-md text-sm transition-colors cursor-pointer">
           Image
           <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
         </label>
         <button
           onClick={handleFreeDraw}
-          className={`px-3 py-1.5 rounded-full shadow-md text-sm transition-colors ${
+          className={`px-3 py-1.5 rounded-md shadow-md text-sm transition-colors ${
             isDrawingMode
               ? 'bg-red-500 hover:bg-red-600 text-white'
               : 'bg-purple-500 hover:bg-purple-600 text-white'
